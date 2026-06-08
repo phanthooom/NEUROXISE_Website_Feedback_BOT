@@ -46,21 +46,26 @@ ${message}
   }
 
   try {
+    const chatIds = TELEGRAM_CHAT_ID.split(',').map(id => id.trim());
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML'
-      })
-    });
+    
+    const sendPromises = chatIds.map(chatId => 
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: text,
+          parse_mode: 'HTML'
+        })
+      }).then(res => res.json())
+    );
 
-    const data = await response.json();
-    if (!data.ok) {
-      console.error('Telegram API error:', data);
-      return res.status(500).json({ error: 'Failed to send message to Telegram.' });
+    const results = await Promise.all(sendPromises);
+    
+    const hasError = results.some(data => !data.ok);
+    if (hasError) {
+      console.error('Telegram API error for one or more IDs:', results);
     }
 
     res.status(200).json({ success: true, message: 'Feedback sent successfully.' });
