@@ -11,10 +11,10 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 app.post('/api/feedback', async (req, res) => {
-  const { name, email, topic, message } = req.body;
+  const { formType, email, name, topic, message } = req.body;
 
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: 'Name, email, and message are required.' });
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
   }
 
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
@@ -22,7 +22,18 @@ app.post('/api/feedback', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error.' });
   }
 
-  const text = `
+  let text = '';
+  
+  if (formType === 'waitlist') {
+    text = `🔥 <b>Новая запись в лист ожидания!</b>\n\n📧 <b>Email:</b> ${email}`;
+  } else if (formType === 'newsletter') {
+    text = `📰 <b>Новая подписка на блог!</b>\n\n📧 <b>Email:</b> ${email}`;
+  } else {
+    // Default to main contact form
+    if (!name || !message) {
+      return res.status(400).json({ error: 'Name and message are required for contact form.' });
+    }
+    text = `
 📩 <b>Новая заявка с сайта NEUROXISE</b>
 
 👤 <b>Имя:</b> ${name}
@@ -31,7 +42,8 @@ app.post('/api/feedback', async (req, res) => {
 
 💬 <b>Сообщение:</b>
 ${message}
-  `;
+    `;
+  }
 
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
